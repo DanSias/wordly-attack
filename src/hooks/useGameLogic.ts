@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { WordEntry } from "@/types/word";
 import words from "@/data/words.json";
+import toast from "react-hot-toast";
 
 // Type the imported JSON as an array of WordEntry
 const wordList: WordEntry[] = words;
+const validWordsSet = new Set(
+  wordList.map((entry) => entry.word.toLowerCase())
+);
 
 type KeyStatus = "correct" | "misplaced" | "wrong";
 
@@ -33,6 +37,7 @@ interface GameLogic {
   handleKeyPress: (key: string) => void;
   gameOver: boolean;
   resetGame: () => void;
+  keyStatus: { [key: string]: KeyStatus };
 }
 
 // The main game logic hook
@@ -50,6 +55,13 @@ export const useGameLogic = (dailyMode = false): GameLogic => {
     if (gameOver) return;
 
     if (key === "Enter" && currentGuess.length === 5) {
+      if (!validWordsSet.has(currentGuess.toLowerCase())) {
+        toast.error(
+          `\"${currentGuess}\" is not a real word. \nPlease try again.`
+        );
+        return;
+      }
+
       const newGuesses = [...guesses, currentGuess];
       setGuesses(newGuesses);
       checkGuess(currentGuess);
@@ -57,8 +69,12 @@ export const useGameLogic = (dailyMode = false): GameLogic => {
 
       if (currentGuess === targetWord) {
         setGameOver(true);
+        toast.success("✨ You guessed the word! ✨", {
+          className: "bg-green-600 text-white text-xl p-5 rounded-xl shadow-lg",
+        });
       } else if (newGuesses.length === 6) {
         setGameOver(true);
+        toast.error(`😔 Game Over! The word was \"${targetWord}\".`);
       }
     } else if (key === "Backspace") {
       setCurrentGuess(currentGuess.slice(0, -1));
@@ -105,6 +121,7 @@ export const useGameLogic = (dailyMode = false): GameLogic => {
     setFeedback([]);
     setCurrentGuess("");
     setGameOver(false);
+    setKeyStatus({}); // Reset key statuses
   };
 
   return {
@@ -114,5 +131,6 @@ export const useGameLogic = (dailyMode = false): GameLogic => {
     handleKeyPress,
     gameOver,
     resetGame,
+    keyStatus,
   };
 };
